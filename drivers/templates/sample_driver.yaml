@@ -1,0 +1,27 @@
+metadata:
+  name: "Mock Legacy Diagnostic App"
+  version: "1.0.0"
+  target_fingerprint: "Win32_Mock_CPP"
+
+interceptor:
+  type: "file_watcher"
+  path: "./examples/output/*.dat"
+  read_mode: "poll"
+  poll_interval_ms: 500
+  stability_ms: 250
+
+schema:
+  header: { offset: 0x00, length: 2, type: "hex", value: "4252" }
+  record_id: { offset: 0x02, length: 16, type: "string", encoding: "ascii", trim: true }
+  value: { offset: 0x12, length: 4, type: "float32", endian: "little" }
+  status_code: { offset: 0x16, length: 2, type: "int16", endian: "little" }
+
+exporter:
+  type: "webhook"
+  endpoint: "http://127.0.0.1:8080/ingest"
+  method: "POST"
+  max_retries: 3
+  retry_backoff_ms: 250
+  headers:
+    Content-Type: "application/json"
+

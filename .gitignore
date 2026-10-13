@@ -1,0 +1,17 @@
+target/
+examples/output/
+daemon/storage/
+storage/
+drivers/generated/
+*.log
+.pytest_cache/
+pytest-of-*/
+agent/.pytest_cache/
+*.tmp
+*.exe
+*.obj
+*.pdb
+.venv/
+__pycache__/
+.env
+
