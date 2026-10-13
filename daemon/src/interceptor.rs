@@ -508,7 +508,8 @@ mod tests {
                 trim: None,
             },
         );
-        let mut bytes = b"BRRESULT-1\0\0\0\0\0\0\0\0\0".to_vec();
+        let mut bytes = b"BRRESULT-1".to_vec();
+        bytes.resize(18, 0);
         bytes.extend_from_slice(&20.5f32.to_le_bytes());
         bytes.extend_from_slice(&0i16.to_le_bytes());
         let record = parse_record(Path::new("result.dat"), &bytes, &schema).unwrap();
