@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import sqlite3
 import subprocess
+import tempfile
 from urllib.parse import urlparse
 from pathlib import Path
 from typing import Any
@@ -45,9 +47,34 @@ def catalog_sqlite(database: str | Path) -> dict[str, Any]:
         return {"database": str(path), "status": "ready", "tables": tables}
     except sqlite3.OperationalError as exc:
         status = "locked" if "locked" in str(exc).lower() or "busy" in str(exc).lower() else "error"
+        if status == "locked":
+            snapshot = _catalog_sqlite_sidecar(path)
+            if snapshot is not None:
+                return snapshot
         return {"database": str(path), "status": status, "error": str(exc), "tables": []}
     finally:
         connection.close()
+
+
+def _catalog_sqlite_sidecar(path: Path) -> dict[str, Any] | None:
+    """Inspect a temporary copy when the application keeps the live DB busy."""
+
+    try:
+        with tempfile.TemporaryDirectory(prefix="bridgit-sqlite-") as directory:
+            snapshot = Path(directory) / path.name
+            shutil.copy2(path, snapshot)
+            for suffix in ("-wal", "-shm"):
+                sidecar = Path(f"{path}{suffix}")
+                if sidecar.exists():
+                    shutil.copy2(sidecar, Path(f"{snapshot}{suffix}"))
+            result = catalog_sqlite(snapshot)
+            if result["status"] == "ready":
+                result["database"] = str(path)
+                result["snapshot_used"] = "temporary sidecar copy"
+                return result
+    except (OSError, sqlite3.Error):
+        return None
+    return None
 
 
 def _table(catalog: dict[str, Any], name: str) -> dict[str, Any]:
